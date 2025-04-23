@@ -88,7 +88,7 @@ public:
     bool need_timeline_consistency() const override { return tl_consistency_; }
 
     // this will be called by homestore when create_repl_dev is called;
-    std::shared_ptr< homestore::ReplDevListener > create_repl_dev_listener(homestore::group_id_t group_id) override {
+    std::shared_ptr< homestore::ReplDevListener > create_repl_dev_listener(homestore::group_id_t) override {
         return std::make_shared< HBListener >(hb_);
 #if 0
         std::scoped_lock lock_guard(_repl_sm_map_lock);
@@ -96,6 +96,14 @@ public:
         if (inserted) { it->second = std::make_shared< ReplicationStateMachine >(hb_); }
         return it->second;
 #endif
+    }
+
+    void destroy_repl_dev_listener(homestore::group_id_t gid) override {
+        // for solo repl dev, there is nothing to be done, it is null-op, because the shared ref is hold by HomeStore
+        // And during remove_repl_dev, homestore will detach listener which will trigger listener's destructor from
+        // there;
+
+        LOGINFO("Destroying repl dev listener, gid: {}", boost::uuids::to_string(gid));
     }
 
     void on_repl_devs_init_completed() override { hb_->on_init_complete(); }
