@@ -133,11 +133,20 @@ bool HomeBlocksImpl::get_stats(volume_id_t id, VolumeStats& stats) const { retur
 
 void HomeBlocksImpl::get_volume_ids(std::vector< volume_id_t >& vol_ids) const {}
 
-VolumeManager::NullAsyncResult HomeBlocksImpl::write(const VolumePtr& vol_ptr, const vol_interface_req_ptr& vol_req) {
-    return vol_ptr->write(vol_req);
+VolumeManager::NullAsyncResult HomeBlocksImpl::write(const VolumePtr& vol, const vol_interface_req_ptr& vol_req) {
+    if (vol->is_destroying()) {
+        LOGE("Volume {} is in destroying state, cannot write", vol->id_str());
+        return folly::makeUnexpected(VolumeError::INTERNAL_ERROR);
+    }
+
+    return vol->write(vol_req);
 }
 
 VolumeManager::NullAsyncResult HomeBlocksImpl::read(const VolumePtr& vol, const vol_interface_req_ptr& req) {
+    if (vol->is_destroying()) {
+        LOGE("Volume {} is in destroying state, cannot read", vol->id_str());
+        return folly::makeUnexpected(VolumeError::INTERNAL_ERROR);
+    }
     return vol->read(req);
 }
 

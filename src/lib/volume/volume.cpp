@@ -101,7 +101,7 @@ bool Volume::init(bool is_recovery) {
 }
 
 void Volume::destroy() {
-    // 0. Set destroying state in superblock;
+    // 0. Set destroying state in superblock and persist to disk;
     state_change(vol_state::DESTROYING);
 
     // 1. destroy the repl dev;
@@ -132,7 +132,12 @@ void Volume::destroy() {
     sb_.destroy();
 }
 
+// error handling is already done at upper layer.
+// e.g. if volume is in destroying state, the request will not be sent to this function, as upper layer will return
+// immediately;
 VolumeManager::NullAsyncResult Volume::write(const vol_interface_req_ptr& vol_req) {
+    outstanding_reqs_.increment(1);
+
     // Step 1. Allocate new blkids. Homestore might return multiple blkid's pointing
     // to different contigious memory locations.
     auto data_size = vol_req->nlbas * rd()->get_blk_size();
@@ -264,6 +269,7 @@ VolumeManager::Result< folly::Unit > Volume::write_to_index(lba_t start_lba, lba
 }
 
 VolumeManager::NullAsyncResult Volume::read(const vol_interface_req_ptr& req) {
+    outstanding_reqs_.increment(1);
     // Step 1: get the blk ids from index table
     vol_read_ctx read_ctx{.buf = req->buffer, .start_lba = req->lba, .blk_size = rd()->get_blk_size()};
     if (auto index_resp = read_from_index(req, read_ctx.index_kvs); index_resp.hasError()) {

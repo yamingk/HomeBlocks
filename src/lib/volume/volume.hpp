@@ -182,6 +182,8 @@ private:
     ReplDevPtr rd_;
     VolIdxTablePtr indx_tbl_;
     superblk< vol_sb_t > sb_;
+
+    sisl::atomic_counter< uint64_t > outstanding_reqs_{0}; // outstanding requests to the volume;
 };
 
 struct vol_repl_ctx : public homestore::repl_req_ctx {
